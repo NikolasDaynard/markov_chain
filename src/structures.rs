@@ -5,11 +5,12 @@ use nannou::prelude::*;
 pub struct Tile {
     x: f32,
     y: f32,
+    col: rgb::Rgb<nannou::color::encoding::Srgb, u8>,
 }
 pub struct Grid {
-    sx: i32,
-    sy: i32,
-    rows: Vec<Vec<Tile>>,
+    pub sx: i32,
+    pub sy: i32,
+    pub rows: Vec<Vec<Tile>>,
 }
 
 impl Grid {
@@ -41,12 +42,12 @@ impl Grid {
 
 impl Tile {
     pub fn new(x: f32, y: f32) -> Self {
-        Tile { x, y }
+        Tile { x, y, col: BEIGE}
     }
 
     pub fn draw(&self, draw: &Draw, win: &Rect, grid_width: i32, grid_height: i32) {
-        let tile_width = (win.w() / grid_width as f32) * 0.5;
-        let tile_height = (win.h() / grid_height as f32) * 0.5;
+        let tile_width = (win.w() / grid_width as f32) * 0.9;
+        let tile_height = (win.h() / grid_height as f32) * 0.9;
         let xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
         let ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
 
@@ -55,6 +56,10 @@ impl Tile {
             .y(ypos)
             .w(tile_width)
             .h(tile_height)
-            .color(BEIGE);
+            .color(self.col);
+    }
+
+    pub fn set_color(&mut self, new_color: rgb::Rgb<nannou::color::encoding::Srgb, u8>) {
+        self.col = new_color;
     }
 }
