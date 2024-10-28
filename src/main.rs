@@ -1,5 +1,5 @@
 use nannou::prelude::*;
-
+// inspired by markov jr
 fn main() {
     nannou::sketch(view).run()
 }
@@ -51,8 +51,8 @@ impl Tile {
     fn draw(&self, draw: &Draw, win: &Rect, grid_width: i32, grid_height: i32) {
         let tile_width = (win.w() / grid_width as f32) * 0.5;
         let tile_height = (win.h() / grid_height as f32) * 0.5;
-        let xpos = ((self.x + 0.5) - (grid_width as f32 / 2.0))  / (grid_width as f32 * win.w());
-        let ypos = ((self.y + 0.5) - (grid_height as f32 / 2.0)) / (grid_height as f32 * win.h());
+        let xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
+        let ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
 
         draw.rect()
             .x(xpos)
