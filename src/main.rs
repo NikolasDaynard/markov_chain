@@ -1,8 +1,11 @@
-use core::time;
+use std::vec;
 
 use nannou::prelude::*;
 mod structures;
 use crate::structures::*;
+use rand::seq::SliceRandom;  // Import the random selection method
+use rand::thread_rng;
+
 // inspired by markov jr
 
 struct Model {
@@ -32,15 +35,32 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-    let t = app.time;
+    let mut matching_tiles: Vec<Tile> = vec![];
+    let pattern_to_replace = vec![WHITE];
+    let replacement_pattern = vec![BLACK];
+    // let t = app.time;
     println!("update");
-    let mut i = 0;
     for row in model.grid.rows.iter_mut() {
-        i += 1;
         for tile in row.iter_mut() {
-            i += 1;
-            tile.set_color(if i % 2 == (t as i32 % 2) { WHITE } else { BLUE });
+            if tile.col == *pattern_to_replace.first().unwrap() {
+                matching_tiles.push(*tile);
+            }
         }
+    }
+    // for tile in matching_tiles {
+    //     println!("x: {}, y: {}, col: {},{},{}", tile.x, tile.y, tile.col.red, tile.col.green, tile.col.blue);
+    // }
+    
+    if let Some(random_tile) = matching_tiles.as_slice().choose(&mut thread_rng()) {
+        println!("Random tile selected: x: {}, y: {}, col: {},{},{}",
+            random_tile.x, random_tile.y, 
+            random_tile.col.red, random_tile.col.green, random_tile.col.blue
+        );
+        let mut new_tile = Tile::new(random_tile.x, random_tile.y);
+        new_tile.col = replacement_pattern.first().unwrap().clone();
+        model.grid.set(random_tile.x as usize, random_tile.y as usize,new_tile);
+    } else {
+        println!("No matching tiles found");
     }
 }
 

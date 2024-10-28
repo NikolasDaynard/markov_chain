@@ -3,9 +3,9 @@ use nannou::prelude::*;
 // Define a Tile struct with position and size
 #[derive(Copy, Clone)]
 pub struct Tile {
-    x: f32,
-    y: f32,
-    col: rgb::Rgb<nannou::color::encoding::Srgb, u8>,
+    pub x: f32,
+    pub y: f32,
+    pub col: rgb::Rgb<nannou::color::encoding::Srgb, u8>,
 }
 pub struct Grid {
     pub sx: i32,
@@ -42,7 +42,7 @@ impl Grid {
 
 impl Tile {
     pub fn new(x: f32, y: f32) -> Self {
-        Tile { x, y, col: BEIGE}
+        Tile { x, y, col: WHITE}
     }
 
     pub fn draw(&self, draw: &Draw, win: &Rect, grid_width: i32, grid_height: i32) {
@@ -50,13 +50,18 @@ impl Tile {
         let tile_height = (win.h() / grid_height as f32) * 0.9;
         let xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
         let ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
-
-        draw.rect()
+        draw.quad()
             .x(xpos)
             .y(ypos)
             .w(tile_width)
             .h(tile_height)
             .color(self.col);
+        // draw.rect()
+        //     .x(xpos)
+        //     .y(ypos)
+        //     .w(tile_width)
+        //     .h(tile_height)
+        //     .color(self.col);
     }
 
     pub fn set_color(&mut self, new_color: rgb::Rgb<nannou::color::encoding::Srgb, u8>) {
