@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use nannou::prelude::*;
 mod structures;
 use crate::structures::*;
@@ -30,6 +28,7 @@ fn model(app: &App) -> Model {
             grid.set(i as usize, j as usize, Tile::new(i as f32, j as f32, WHITE));
         }
     }
+    grid.set(50, 50, Tile::new(50.0, 50.0, BLACK));
     Model {
         grid: grid,
         iterations: 0,
@@ -38,9 +37,10 @@ fn model(app: &App) -> Model {
 
 fn update(app: &App, model: &mut Model, _update: Update) {
     model.iterations += 1;
+    model.grid.iterate();
 
-    let pattern_to_replace = vec![WHITE, WHITE, WHITE];  // Sequence to find
-    let replacement_pattern = vec![RED, GREEN, BLUE];  // Replacement sequence
+    let pattern_to_replace = vec![BLACK, WHITE, WHITE];  // Sequence to find
+    let replacement_pattern = vec![BLACK, BISQUE, BISQUE];  // Replacement sequence (inverted, first is last to be replaced)
     let mut rng = thread_rng();
     
     // Function to recursively check for pattern match
@@ -60,16 +60,19 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 neighbors.shuffle(&mut thread_rng());
 
                 for (nx, ny) in neighbors {
+                    let mut already_seached = false;
                     for tile in &searched_tiles {
                         if tile.0 == nx && tile.1 == ny {
-                            return None;
+                            already_seached = true;
                         } 
                     }
-                    searched_tiles.push((x, y));
-                    println!("searched {} {}", x, y);
-                    if let Some(mut matching_tiles) = check_pattern(grid, nx, ny, pattern, searched_tiles.clone(), depth + 1) {
-                        matching_tiles.push((x, y)); // Store matching coordinates
-                        return Some(matching_tiles);
+                    if !already_seached {
+                        searched_tiles.push((x, y));
+                        // println!("searched {} {}", x, y);
+                        if let Some(mut matching_tiles) = check_pattern(grid, nx, ny, pattern, searched_tiles.clone(), depth + 1) {
+                            matching_tiles.push((x, y)); // Store matching coordinates
+                            return Some(matching_tiles);
+                        }
                     }
                 }
             }
@@ -85,7 +88,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     for x in 0..model.grid.sx {
         for y in 0..model.grid.sy {
             if let Some(matching_tiles) = check_pattern(&model.grid, x as usize, y as usize, &pattern_to_replace, vec![], 0) {
-                println!("Pattern found starting at x: {}, y: {}", x, y);
+                // println!("Pattern found starting at x: {}, y: {}", x, y);
                 all_matches.push(matching_tiles);
             }
         }
@@ -94,11 +97,11 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         for (i, &(tx, ty)) in random_match.iter().enumerate() {
             let new_tile = Tile::new(tx as f32, ty as f32, replacement_pattern[i].clone());
             model.grid.set(tx, ty, new_tile);
-            println!("sey {} {}", tx, ty);
+            // println!("sey {} {}", tx, ty);
         }
     }
     
-    println!("No matching patterns found");
+    // println!("No matching patterns found");
 }
 
 
@@ -117,7 +120,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let win = app.window_rect();
     // let t = app.time;
     let draw = app.draw();
-    draw.background().color(BLACK);
+    // draw.background().color(BLACK);
 
     model.grid.draw(&draw, &win);
 
