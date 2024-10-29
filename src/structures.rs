@@ -54,7 +54,7 @@ impl Tile {
     }
 
     pub fn draw(&self, draw: &Draw, win: &Rect, grid_width: i32, grid_height: i32) {
-        if self.iterations > 1 {
+        if self.iterations > 3 { // idk why but it's gotta be 3 to load properly
             return;
         }
 
