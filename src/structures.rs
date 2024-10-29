@@ -62,8 +62,8 @@ impl Tile {
         let tile_height = (win.h() / grid_height as f32) * 0.9;
         let mut xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
         let mut ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
-        xpos = xpos * 0.9;
-        ypos = ypos * 0.9;
+        // xpos = xpos * 0.9;
+        // ypos = ypos * 0.9;
         draw.quad()
             .x(xpos)
             .y(ypos)
@@ -82,5 +82,25 @@ impl Tile {
     pub fn set_color(&mut self, new_color: rgb::Rgb<nannou::color::encoding::Srgb, u8>) {
         self.col = new_color;
         self.iterations = 0;
+    }
+}
+
+pub struct Pattern {
+    pub pattern_to_replace: Vec<rgb::Rgb<nannou::color::encoding::Srgb, u8>>,
+    pub replacement_pattern: Vec<rgb::Rgb<nannou::color::encoding::Srgb, u8>>,
+}
+
+impl Pattern {
+    pub fn new(pattern_to_replace: Vec<rgb::Rgb<nannou::color::encoding::Srgb, u8>>, replacement_pattern: Vec<rgb::Rgb<nannou::color::encoding::Srgb, u8>>) -> Self {
+        Pattern { pattern_to_replace, replacement_pattern }
+    }
+    pub fn print(&self) {
+        for color in self.pattern_to_replace.clone() {
+            print!("replacing {} {} {} ", color.red, color.green, color.blue)
+        }
+        print!("\n");
+        for color in self.replacement_pattern.clone() {
+            print!("with {} {} {} ", color.red, color.green, color.blue)
+        }
     }
 }

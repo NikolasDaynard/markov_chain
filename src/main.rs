@@ -5,7 +5,7 @@ use rand::seq::SliceRandom;  // Import the random selection method
 use rand::thread_rng;
 
 // inspired by markov jr
-
+// pick *tile* randomly rather than assemble all possible tiles and select
 struct Model {
     grid: Grid,
     iterations: i32,
@@ -39,8 +39,15 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     model.iterations += 1;
     model.grid.iterate();
 
-    let pattern_to_replace = vec![BLACK, WHITE, WHITE];  // Sequence to find
-    let replacement_pattern = vec![BLACK, BISQUE, BLACK];  // Replacement sequence (inverted, first is last to be replaced)
+    // let pattern_to_replace = vec![BLACK, WHITE, WHITE];  // Sequence to find
+    // let replacement_pattern = vec![BLACK, GREY, GREY];  // Replacement sequence (inverted, first is last to be replaced)
+    let mut all_patterns: Vec<Pattern> = vec![];
+    all_patterns.append(
+        &mut vec![
+        Pattern::new(vec![BLACK, WHITE, WHITE], vec![BLACK, RED, RED]),
+        Pattern::new(vec![BLACK], vec![RED])
+        ]
+        );
     let mut rng = thread_rng();
     
     // Function to recursively check for pattern match
@@ -60,7 +67,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 if !direction.is_some() {
                     if let Some(random_dir) = neighbors.as_slice().choose(&mut thread_rng()) {
                         direction = Some(*random_dir);
-                        println!("rand dir {}", direction.unwrap().0);
+                        // println!("rand dir {}", direction.unwrap().0);
                     }
                 }
 
@@ -72,7 +79,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 }
                 if !already_seached {
                     searched_tiles.push((x, y));
-                    println!("searched {} {}", x, y);
                     if let Some(mut matching_tiles) = check_pattern(grid, 
                             (x as i32 + direction.unwrap().0) as usize, 
                             (y as i32 + direction.unwrap().1) as usize,
@@ -90,21 +96,25 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
     println!("update");
     
-    let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
-    // Iterate through the grid to find matching patterns
-    for x in 0..model.grid.sx {
-        for y in 0..model.grid.sy {
-            if let Some(matching_tiles) = check_pattern(&model.grid, x as usize, y as usize, &pattern_to_replace, vec![], None, 0) {
-                println!("Pattern found starting at x: {}, y: {}", x, y);
-                all_matches.push(matching_tiles);
+    for sequence in all_patterns {
+        let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
+        // Iterate through the grid to find matching patterns
+        for x in 0..model.grid.sx {
+            for y in 0..model.grid.sy {
+                if let Some(matching_tiles) = check_pattern(&model.grid, x as usize, y as usize, &sequence.pattern_to_replace, vec![], None, 0) {
+                    // println!("Pattern found starting at x: {}, y: {}", x, y);
+                    all_matches.push(matching_tiles);
+                }
             }
         }
-    }
-    if let Some(random_match) = all_matches.as_slice().choose(&mut thread_rng()) {
-        for (i, &(tx, ty)) in random_match.iter().enumerate() {
-            let new_tile = Tile::new(tx as f32, ty as f32, replacement_pattern[i].clone());
-            model.grid.set(tx, ty, new_tile);
-            println!("sey {} {}", tx, ty);
+        if let Some(random_match) = all_matches.as_slice().choose(&mut thread_rng()) {
+
+            for (i, &(tx, ty)) in random_match.iter().enumerate() {
+                let new_tile = Tile::new(tx as f32, ty as f32, sequence.replacement_pattern[i].clone());
+                model.grid.set(tx, ty, new_tile);
+                println!("set {} {} {}", tx, ty, i);
+            }
+            return;
         }
     }
     
