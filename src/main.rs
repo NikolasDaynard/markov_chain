@@ -31,8 +31,8 @@ fn model(app: &App) -> Model {
         }
     }
     grid.set(50, 50, Tile::new(50.0, 50.0, BLACK));
-    grid.set(51, 50, Tile::new(51.0, 50.0, BLACK));
-    grid.set(52, 50, Tile::new(52.0, 50.0, BLACK));
+    // grid.set(51, 50, Tile::new(51.0, 50.0, BLACK));
+    // grid.set(52, 50, Tile::new(52.0, 50.0, BLACK));
     Model {
         grid: grid,
         iterations: 0,
@@ -86,46 +86,41 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     (0, -1),  // Up
                     (0, 1)              // Down
                 ];
-                neighbors.shuffle(&mut thread_rng());
+                if !direction.is_some() {
+                    neighbors.shuffle(&mut thread_rng());
 
-                for neighbor in neighbors {
-                    if !direction.is_some() {
-                        if pattern.len() > depth + 1 {
-                            if grid.get((x as i32 + neighbor.0) as usize, (y as i32 + neighbor.1) as usize).is_some() {
-                                if grid.get((x as i32 + neighbor.0) as usize, (y as i32 + neighbor.1) as usize).unwrap().col == pattern[depth + 1] {
-                                    direction = Some(neighbor);
-                                    break;
+                    for neighbor in neighbors {
+                            if pattern.len() > depth + 1 {
+                                if grid.get((x as i32 + neighbor.0) as usize, (y as i32 + neighbor.1) as usize).is_some() {
+                                    if grid.get((x as i32 + neighbor.0) as usize, (y as i32 + neighbor.1) as usize).unwrap().col == pattern[depth + 1] {
+                                        direction = Some(neighbor);
+                                        break;
+                                    }
                                 }
+                            }else { // len is 1, so dir doesn't matter
+                                direction = Some(neighbor);
+                                break;
                             }
-                        }else { // len is 1, so dir doesn't matter
-                            direction = Some(neighbor);
-                            break;
-                        }
-                        // println!("rand dir {}", direction.unwrap().0);
-                    }else{
-                        break;
+                            // println!("rand dir {}", direction.unwrap().0);
                     }
                 }
                 if !direction.is_some() {
                     return None;
                 }
 
-                let mut already_seached = false;
                 for tile in &searched_tiles {
                     if tile.0 as i32 == x as i32 + direction.unwrap().0 && tile.1 as i32 == y as i32 + direction.unwrap().1 {
-                        already_seached = true;
+                        return None;
                     } 
                 }
-                if !already_seached {
-                    searched_tiles.push((x, y));
-                    if let Some(mut matching_tiles) = check_pattern(grid, 
-                            (x as i32 + direction.unwrap().0) as usize, 
-                            (y as i32 + direction.unwrap().1) as usize,
-                             pattern, searched_tiles.clone(), direction,depth + 1) {
+                searched_tiles.push((x, y));
+                if let Some(mut matching_tiles) = check_pattern(grid, 
+                        (x as i32 + direction.unwrap().0) as usize, 
+                        (y as i32 + direction.unwrap().1) as usize,
+                            pattern, searched_tiles, direction,depth + 1) {
 
-                        matching_tiles.push((x, y)); // Store matching coordinates
-                        return Some(matching_tiles);
-                    }
+                    matching_tiles.push((x, y)); // Store matching coordinates
+                    return Some(matching_tiles);
                 }
             }
         }
@@ -134,7 +129,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     println!("update");
-    
+  
     for sequence in all_patterns {
         let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
         // Iterate through the grid to find matching patterns
@@ -153,7 +148,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 model.grid.set(tx, ty, new_tile);
                 // println!("set {} {} {}", tx, ty, i);
             }
-            
+
             let elapsed = now.elapsed();
             println!("Elapsed: {:.2?}", elapsed);
             return;

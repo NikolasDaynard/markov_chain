@@ -1,0 +1,14 @@
+            // Rule: Replace WHITE space surrounded by BLACKs into a BLACK (to form cave structure)
+            Pattern::new(vec![BLACK, WHITE, WHITE], vec![BLACK, GRAY, GRAY]), // random walk
+            Pattern::new(vec![GRAY, WHITE], vec![BLUE, GRAY]), // expand
+            Pattern::new(vec![GRAY], vec![BLUE]), // homogonize
+            Pattern::new(vec![BLUE, WHITE], vec![RED, BLUE]), // expand again
+
+            Pattern::new(vec![BLUE, BLACK, RED, WHITE], vec![BLACK, PINK, BLUE, BLUE]), // random walk
+            Pattern::new(vec![BLACK, PINK, BLUE, BLUE], vec![BLACK, BLUE, PINK, BLUE]), // jump over doors if stuck, delete door to avoid jump
+            Pattern::new(vec![BLACK, BLUE], vec![BLACK, BLUE]), // random walk
+            Pattern::new(vec![BLACK, RED, BLUE], vec![BLACK, RED, BLUE]), // jump over wall if stuck
+            Pattern::new(vec![PINK, RED], vec![BLUE, BLUE]), // Expand pink doorways
+
+            Pattern::new(vec![BLUE], vec![BLACK]), // speed up cave filling
+

@@ -1,5 +1,6 @@
 use nannou::prelude::*;
 
+#[derive(Clone)]
 pub struct Grid {
     pub sx: i32,
     pub sy: i32,
@@ -34,7 +35,7 @@ impl Grid {
     pub fn iterate(&mut self) {
         for row in &mut self.rows {
             for tile in row.iter_mut() {
-                tile.iterations += 1;
+                tile.iterate();
             }
         }
     }  
@@ -54,6 +55,7 @@ pub struct Tile {
     pub y: f32,
     pub col: rgb::Rgb<nannou::color::encoding::Srgb, u8>,
     pub iterations: i32,
+    // pub notified: bool, // if tile near it has been updated
 }
 impl Tile {
     pub fn new(x: f32, y: f32, col: rgb::Rgb<nannou::color::encoding::Srgb, u8>) -> Self {
@@ -69,8 +71,28 @@ impl Tile {
         let tile_height = (win.h() / grid_height as f32) * 0.9;
         let mut xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
         let mut ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
+        // let mut new_color = self.col;
         // xpos = xpos * 0.9;
         // ypos = ypos * 0.9;
+        // if self.notified {
+        //     // new_color = rgb::Srgb { 
+        //     //     red: clamp_max(self.col.red as i32 + 100, 255) as u8, 
+        //     //     green: clamp_max(self.col.green as i32 + 100, 255) as u8, 
+        //     //     blue: self.col.blue, standard: ::core::marker::PhantomData };
+        //     draw.quad()
+        //         .x(xpos)
+        //         .y(ypos)
+        //         .w(tile_width * 1.1)
+        //         .h(tile_height * 1.1)
+        //         .color(AQUA);
+        // }else{
+        //     draw.quad()
+        //         .x(xpos)
+        //         .y(ypos)
+        //         .w(tile_width * 1.1)
+        //         .h(tile_height * 1.1)
+        //         .color(BLACK); 
+        // }
         draw.quad()
             .x(xpos)
             .y(ypos)
@@ -89,6 +111,11 @@ impl Tile {
     pub fn set_color(&mut self, new_color: rgb::Rgb<nannou::color::encoding::Srgb, u8>) {
         self.col = new_color;
         self.iterations = 0;
+        // self.notified = true;
+    }
+    pub fn iterate(&mut self) {
+        // self.notified = false;
+        self.iterations += 1;
     }
 }
 
