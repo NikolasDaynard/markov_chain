@@ -3,6 +3,7 @@ mod structures;
 use crate::structures::*;
 use rand::seq::SliceRandom;  // Import the random selection method
 use rand::thread_rng;
+use std::collections::HashMap;
 use std::time::Instant;
 
 // inspired by markov jr
@@ -11,6 +12,7 @@ struct Model {
     grid: Grid,
     iterations: i32,
     previous_window_size: (f32, f32),
+    tilemap: HashMap<Color, Vec<Tile>>,
 }
 
 fn model(app: &App) -> Model {
@@ -33,14 +35,33 @@ fn model(app: &App) -> Model {
     grid.set(50, 50, Tile::new(50.0, 50.0, BLACK));
     // grid.set(51, 50, Tile::new(51.0, 50.0, BLACK));
     // grid.set(52, 50, Tile::new(52.0, 50.0, BLACK));
+
+    let mut tilemap: HashMap<Color, Vec<Tile>> = HashMap::new();
+    for x in 0..grid.sx {
+        for y in 0..grid.sy {
+            let tile = grid.get(x as usize, y as usize).unwrap();
+            let mut tile_vector: Vec<Tile>;
+            if tilemap.contains_key(&Color::new(tile.col)) {
+                tile_vector = tilemap[&Color::new(tile.col)].clone();
+            }else {
+                tile_vector = vec![];
+            }
+            tile_vector.push(tile);
+            tilemap.insert(Color::new(tile.col), tile_vector);
+        }
+    }
+
     Model {
         grid: grid,
         iterations: 0,
         previous_window_size: (0.0, 0.0),
+        tilemap: tilemap,
     }
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
+    // make a map of tile : color, and then just iterate over the map
+    // next thing, make map store what checks tile passes, if it is not updated and fails the check, remove it from the map
     let now = Instant::now();
     model.iterations += 1;
     model.grid.iterate();
@@ -129,31 +150,91 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     println!("update");
-  
+
     for sequence in all_patterns {
         let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
         // Iterate through the grid to find matching patterns
-        for x in 0..model.grid.sx {
-            for y in 0..model.grid.sy {
-                if let Some(matching_tiles) = check_pattern(&model.grid, x as usize, y as usize, &sequence.pattern_to_replace, vec![], None, 0) {
-                    // println!("Pattern found starting at x: {}, y: {}", x, y);
-                    all_matches.push(matching_tiles);
-                }
+        if !model.tilemap.contains_key(&Color::new(*sequence.pattern_to_replace.first().unwrap())) {
+            continue;
+        }
+        for tile in model.tilemap[&Color::new(*sequence.pattern_to_replace.first().unwrap())].iter() {
+            if let Some(matching_tiles) = check_pattern(&model.grid, tile.x as usize, tile.y as usize, &sequence.pattern_to_replace, vec![], None, 0) {
+                // println!("Pattern found starting at x: {}, y: {}", x, y);
+                all_matches.push(matching_tiles);
             }
         }
         if let Some(random_match) = all_matches.as_slice().choose(&mut thread_rng()) {
+            let tilmapelapsed = now.elapsed();
 
             for (i, &(tx, ty)) in random_match.iter().enumerate() {
                 let new_tile = Tile::new(tx as f32, ty as f32, sequence.replacement_pattern[i].clone());
+                let prev_tile = model.grid.get(tx, ty).unwrap();
+
+                let mut tile_vector: Vec<Tile>;
+                if model.tilemap.contains_key(&Color::new(new_tile.col)) {
+                    tile_vector = model.tilemap[&Color::new(new_tile.col)].clone();
+                }else {
+                    tile_vector = vec![];
+                }
+                tile_vector.push(new_tile);
+                model.tilemap.insert(Color::new(new_tile.col), tile_vector);
+
+                // collect garbage
+                if model.tilemap.contains_key(&Color::new(prev_tile.col)) {
+                    tile_vector = model.tilemap[&Color::new(prev_tile.col)].clone();
+                }else {
+                    tile_vector = vec![];
+                }
+
+                let mut index = 0;
+                for tile in tile_vector.iter() {
+                    if tile.x as usize == tx && tile.y as usize == ty {
+                        tile_vector.remove(index);
+                        index = 100000;
+                        break;
+                    }
+                    index += 1;
+                }
+                if index != 100000 {
+                    println!("ERROR. NOT FOUND TILE")
+                }
+                assert_eq!(index, 100000);
+
                 model.grid.set(tx, ty, new_tile);
-                // println!("set {} {} {}", tx, ty, i);
+                println!("set {} {} {}", tx, ty, i);
+
             }
 
             let elapsed = now.elapsed();
             println!("Elapsed: {:.2?}", elapsed);
+            println!("Tile Elapsed: {:.2?}", tilmapelapsed);
             return;
         }
     }
+    // for sequence in all_patterns {
+    //     let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
+    //     // Iterate through the grid to find matching patterns
+    //     for x in 0..model.grid.sx {
+    //         for y in 0..model.grid.sy {
+    //             if let Some(matching_tiles) = check_pattern(&model.grid, x as usize, y as usize, &sequence.pattern_to_replace, vec![], None, 0) {
+    //                 // println!("Pattern found starting at x: {}, y: {}", x, y);
+    //                 all_matches.push(matching_tiles);
+    //             }
+    //         }
+    //     }
+    //     if let Some(random_match) = all_matches.as_slice().choose(&mut thread_rng()) {
+
+    //         for (i, &(tx, ty)) in random_match.iter().enumerate() {
+    //             let new_tile = Tile::new(tx as f32, ty as f32, sequence.replacement_pattern[i].clone());
+    //             model.grid.set(tx, ty, new_tile);
+    //             // println!("set {} {} {}", tx, ty, i);
+    //         }
+
+    //         let elapsed = now.elapsed();
+    //         println!("Elapsed: {:.2?}", elapsed);
+    //         return;
+    //     }
+    // }
     
     println!("No matching patterns found");
 }

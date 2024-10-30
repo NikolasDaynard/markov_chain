@@ -1,4 +1,30 @@
 use nannou::prelude::*;
+use std::hash::{Hash, Hasher};
+
+pub struct Color {
+    col: rgb::Rgb<nannou::color::encoding::Srgb, u8>,
+}
+impl Color {
+    pub fn new(col: rgb::Rgb<nannou::color::encoding::Srgb, u8>) -> Self {
+        Color { col }
+    }
+}
+// Implement Hash, Eq, and PartialEq for the wrapper
+impl Hash for Color {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.col.red.hash(state);
+        self.col.green.hash(state);
+        self.col.blue.hash(state);
+    }
+}
+
+impl PartialEq for Color {
+    fn eq(&self, other: &Self) -> bool {
+        self.col.red == other.col.red && self.col.green == other.col.green && self.col.blue == other.col.blue
+    }
+}
+
+impl Eq for Color {}
 
 #[derive(Clone)]
 pub struct Grid {
@@ -49,7 +75,7 @@ impl Grid {
 }
 
 // Define a Tile struct with position and size
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Tile {
     pub x: f32,
     pub y: f32,
@@ -57,6 +83,7 @@ pub struct Tile {
     pub iterations: i32,
     // pub notified: bool, // if tile near it has been updated
 }
+
 impl Tile {
     pub fn new(x: f32, y: f32, col: rgb::Rgb<nannou::color::encoding::Srgb, u8>) -> Self {
         Tile { x, y, col, iterations: 0}
@@ -116,6 +143,9 @@ impl Tile {
     pub fn iterate(&mut self) {
         // self.notified = false;
         self.iterations += 1;
+    }
+    pub fn print(&self) {
+        println!("x: {}, y: {}, col, r:{} g:{} b:{}", self.x, self.y, self.col.red, self.col.green, self.col.blue);
     }
 }
 
