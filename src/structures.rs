@@ -143,7 +143,7 @@ impl Tile {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Pattern {
     pub pattern_to_replace: Vec<rgb::Rgb<nannou::color::encoding::Srgb, u8>>,
     pub replacement_pattern: Vec<rgb::Rgb<nannou::color::encoding::Srgb, u8>>,

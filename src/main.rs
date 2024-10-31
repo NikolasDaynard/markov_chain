@@ -54,31 +54,15 @@ fn model(app: &App) -> Model {
     }
 
     let args: Vec<String> = env::args().collect();
-    let rewrite_rules = vec![
-        // Rule: Replace WHITE space surrounded by BLACKs into a BLACK (to form cave structure)
-        Pattern::new(vec![BLACK, WHITE, WHITE], vec![BLACK, GRAY, GRAY]), // random walk
-        Pattern::new(vec![GRAY, WHITE], vec![BLUE, GRAY]), // expand
-        Pattern::new(vec![GRAY], vec![BLUE]), // homogonize
-        Pattern::new(vec![BLUE, WHITE], vec![RED, BLUE]), // expand again
-
-        Pattern::new(vec![RED, WHITE], vec![BLACK, PINK]), // make more
-        Pattern::new(vec![PINK, RED], vec![BLUE, BLUE]), // Expand pink doorways
-        Pattern::new(vec![PINK, BLUE], vec![BLUE, BLUE]), // Expand pink doorways
-
-        Pattern::new(vec![BLACK], vec![BLUE]), // cleanup
-    ];
     
     let generated_rules = parse_file(args[1].clone());
-    for (i, rule) in rewrite_rules.iter().enumerate() {
-        assert_eq!(generated_rules[i], *rule);
-    }
-    
+
     Model {
         grid: grid,
         iterations: 0,
         previous_window_size: (0.0, 0.0),
         tilemap: tilemap,
-        rewrite_rules: rewrite_rules,
+        rewrite_rules: generated_rules,
     }
 }
 
