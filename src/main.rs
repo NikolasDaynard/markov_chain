@@ -3,6 +3,7 @@ mod structures;
 use crate::structures::*;
 use rand::seq::SliceRandom;  // Import the random selection method
 use rand::thread_rng;
+use std::arch::x86_64::_mm_pause;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -62,6 +63,7 @@ fn model(app: &App) -> Model {
 fn update(app: &App, model: &mut Model, _update: Update) {
     // make a map of tile : color, and then just iterate over the map
     // next thing, make map store what checks tile passes, if it is not updated and fails the check, remove it from the map
+    // if you use it as starting tile, and it fails the check, add num to failing checks, if a tile near it updates reset it
     let now = Instant::now();
     model.iterations += 1;
     model.grid.iterate();
@@ -83,11 +85,12 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
             Pattern::new(vec![BLUE, BLACK, RED, WHITE], vec![BLACK, PINK, BLUE, BLUE]), // random walk
             Pattern::new(vec![BLACK, PINK, BLUE, BLUE], vec![BLACK, BLUE, PINK, BLUE]), // jump over doors if stuck, delete door to avoid jump
+            Pattern::new(vec![RED, WHITE], vec![BLACK, PINK]), // make more
             Pattern::new(vec![BLACK, BLUE], vec![BLACK, BLUE]), // random walk
             Pattern::new(vec![BLACK, RED, BLUE], vec![BLACK, RED, BLUE]), // jump over wall if stuck
             Pattern::new(vec![PINK, RED], vec![BLUE, BLUE]), // Expand pink doorways
 
-            Pattern::new(vec![BLUE], vec![BLACK]), // speed up cave filling
+            // Pattern::new(vec![BLUE], vec![BLACK]), // speed up cave filling
         ]
     );
     
@@ -107,49 +110,42 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                     (0, -1),  // Up
                     (0, 1)              // Down
                 ];
-                if !direction.is_some() {
-                    neighbors.shuffle(&mut thread_rng());
-
-                    for neighbor in neighbors {
-                            if pattern.len() > depth + 1 {
-                                if grid.get((x as i32 + neighbor.0) as usize, (y as i32 + neighbor.1) as usize).is_some() {
-                                    if grid.get((x as i32 + neighbor.0) as usize, (y as i32 + neighbor.1) as usize).unwrap().col == pattern[depth + 1] {
-                                        direction = Some(neighbor);
-                                        break;
-                                    }
-                                }
-                            }else { // len is 1, so dir doesn't matter
-                                direction = Some(neighbor);
-                                break;
-                            }
-                            // println!("rand dir {}", direction.unwrap().0);
+                neighbors.shuffle(&mut thread_rng());
+                for neighbor in neighbors {
+                    let mut dirtemp = direction;
+                    if !dirtemp.is_some() {
+                        dirtemp = Some(neighbor);
                     }
-                }
-                if !direction.is_some() {
-                    return None;
-                }
 
-                for tile in &searched_tiles {
-                    if tile.0 as i32 == x as i32 + direction.unwrap().0 && tile.1 as i32 == y as i32 + direction.unwrap().1 {
-                        return None;
-                    } 
-                }
-                searched_tiles.push((x, y));
-                if let Some(mut matching_tiles) = check_pattern(grid, 
-                        (x as i32 + direction.unwrap().0) as usize, 
-                        (y as i32 + direction.unwrap().1) as usize,
-                            pattern, searched_tiles, direction,depth + 1) {
+                
 
-                    matching_tiles.push((x, y)); // Store matching coordinates
-                    return Some(matching_tiles);
+                    for tile in &searched_tiles {
+                        if tile.0 as i32 == x as i32 + dirtemp.unwrap().0 && tile.1 as i32 == y as i32 + dirtemp.unwrap().1 {
+                            continue;
+                        } 
+                    }
+                    searched_tiles.push((x, y));
+                    if let Some(mut matching_tiles) = check_pattern(grid, 
+                            (x as i32 + dirtemp.unwrap().0) as usize, 
+                            (y as i32 + dirtemp.unwrap().1) as usize,
+                                pattern, searched_tiles.clone(), dirtemp,depth + 1) {
+
+                        matching_tiles.push((x, y)); // Store matching coordinates
+                        return Some(matching_tiles);
+                    }
                 }
             }
         }
-
+        // if grid.get(x, y).is_some() {
+        //     if grid.get(x, y).unwrap().col == BLACK {
+        //         // println!("FAILED WITH:");
+        //         // grid.get(x, y).unwrap().print();
+        //     }
+        // }
         None
     }
 
-    println!("update");
+    // println!("update");
 
     for sequence in all_patterns {
         let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
@@ -201,7 +197,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 assert_eq!(index, 100000);
 
                 model.grid.set(tx, ty, new_tile);
-                println!("set {} {} {}", tx, ty, i);
+                // println!("set {} {} {}", tx, ty, i);
 
             }
 
