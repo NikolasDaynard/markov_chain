@@ -86,8 +86,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             Pattern::new(vec![GRAY], vec![BLUE]), // homogonize
             Pattern::new(vec![BLUE, WHITE], vec![RED, BLUE]), // expand again
 
-            Pattern::new(vec![BLUE, BLACK, RED, WHITE], vec![BLACK, PINK, BLUE, BLUE]), // random walk
-            Pattern::new(vec![BLACK, PINK, BLUE, BLUE], vec![BLACK, BLUE, PINK, BLUE]), // jump over doors if stuck, delete door to avoid jump
             Pattern::new(vec![RED, WHITE], vec![BLACK, PINK]), // make more
             Pattern::new(vec![PINK, RED], vec![BLUE, BLUE]), // Expand pink doorways
             Pattern::new(vec![PINK, BLUE], vec![BLUE, BLUE]), // Expand pink doorways
