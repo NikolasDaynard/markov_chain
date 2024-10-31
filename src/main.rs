@@ -64,6 +64,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     // make a map of tile : color, and then just iterate over the map
     // next thing, make map store what checks tile passes, if it is not updated and fails the check, remove it from the map
     // if you use it as starting tile, and it fails the check, add num to failing checks, if a tile near it updates reset it
+    // only need to notify in straight line <- ^ V ->
+
+    // multithreading this is *super* possible, one per rule
     let now = Instant::now();
     model.iterations += 1;
     model.grid.iterate();
@@ -86,15 +89,12 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             Pattern::new(vec![BLUE, BLACK, RED, WHITE], vec![BLACK, PINK, BLUE, BLUE]), // random walk
             Pattern::new(vec![BLACK, PINK, BLUE, BLUE], vec![BLACK, BLUE, PINK, BLUE]), // jump over doors if stuck, delete door to avoid jump
             Pattern::new(vec![RED, WHITE], vec![BLACK, PINK]), // make more
-            Pattern::new(vec![BLACK, BLUE], vec![BLACK, BLUE]), // random walk
-            Pattern::new(vec![BLACK, RED, BLUE], vec![BLACK, RED, BLUE]), // jump over wall if stuck
             Pattern::new(vec![PINK, RED], vec![BLUE, BLUE]), // Expand pink doorways
+            Pattern::new(vec![PINK, BLUE], vec![BLUE, BLUE]), // Expand pink doorways
 
-            // Pattern::new(vec![BLUE], vec![BLACK]), // speed up cave filling
+            Pattern::new(vec![BLACK], vec![BLUE]), // cleanup
         ]
     );
-    
-    let mut rng = thread_rng();
     
     // Function to recursively check for pattern match
     fn check_pattern(grid: &Grid, x: usize, y: usize, pattern: &[rgb::Rgb<nannou::color::encoding::Srgb, u8>], mut searched_tiles: Vec<(usize, usize)>, mut direction: Option<(i32, i32)>, depth: usize) -> Option<Vec<(usize, usize)>> {
@@ -105,19 +105,17 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         if let Some(tile) = grid.get(x, y) {
             if tile.col == pattern[depth] {
                 let mut neighbors = vec![
-                    (-1, 0), // Left
-                    (1, 0),             // Right
+                    (-1, 0),  // Left
+                    (1, 0),   // Right
                     (0, -1),  // Up
-                    (0, 1)              // Down
+                    (0, 1)    // Down
                 ];
                 neighbors.shuffle(&mut thread_rng());
                 for neighbor in neighbors {
                     let mut dirtemp = direction;
-                    if !dirtemp.is_some() {
+                    if !direction.is_some() {
                         dirtemp = Some(neighbor);
                     }
-
-                
 
                     for tile in &searched_tiles {
                         if tile.0 as i32 == x as i32 + dirtemp.unwrap().0 && tile.1 as i32 == y as i32 + dirtemp.unwrap().1 {
@@ -136,16 +134,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 }
             }
         }
-        // if grid.get(x, y).is_some() {
-        //     if grid.get(x, y).unwrap().col == BLACK {
-        //         // println!("FAILED WITH:");
-        //         // grid.get(x, y).unwrap().print();
-        //     }
-        // }
+
         None
     }
-
-    // println!("update");
 
     for sequence in all_patterns {
         let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
@@ -207,30 +198,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             return;
         }
     }
-    // for sequence in all_patterns {
-    //     let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
-    //     // Iterate through the grid to find matching patterns
-    //     for x in 0..model.grid.sx {
-    //         for y in 0..model.grid.sy {
-    //             if let Some(matching_tiles) = check_pattern(&model.grid, x as usize, y as usize, &sequence.pattern_to_replace, vec![], None, 0) {
-    //                 // println!("Pattern found starting at x: {}, y: {}", x, y);
-    //                 all_matches.push(matching_tiles);
-    //             }
-    //         }
-    //     }
-    //     if let Some(random_match) = all_matches.as_slice().choose(&mut thread_rng()) {
-
-    //         for (i, &(tx, ty)) in random_match.iter().enumerate() {
-    //             let new_tile = Tile::new(tx as f32, ty as f32, sequence.replacement_pattern[i].clone());
-    //             model.grid.set(tx, ty, new_tile);
-    //             // println!("set {} {} {}", tx, ty, i);
-    //         }
-
-    //         let elapsed = now.elapsed();
-    //         println!("Elapsed: {:.2?}", elapsed);
-    //         return;
-    //     }
-    // }
     
     println!("No matching patterns found");
 }
@@ -244,15 +211,9 @@ fn main() {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    // if model.iterations % 10 != 0 {
-    //     return;
-    // }
-    // Begin drawing
     let win = app.window_rect();
 
-    // let t = app.time;
     let draw = app.draw();
-    // draw.background().color(BLACK);
 
     model.grid.draw(&draw, &win);
 
