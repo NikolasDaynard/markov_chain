@@ -96,8 +96,8 @@ impl Tile {
 
         let tile_width = (win.w() / grid_width as f32) * 0.9;
         let tile_height = (win.h() / grid_height as f32) * 0.9;
-        let mut xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
-        let mut ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
+        let xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
+        let ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
         // let mut new_color = self.col;
         // xpos = xpos * 0.9;
         // ypos = ypos * 0.9;
@@ -120,19 +120,13 @@ impl Tile {
         //         .h(tile_height * 1.1)
         //         .color(BLACK); 
         // }
-        draw.quad()
+
+        draw.rect()
             .x(xpos)
             .y(ypos)
             .w(tile_width)
             .h(tile_height)
             .color(self.col);
-
-        // draw.rect()
-        //     .x(xpos)
-        //     .y(ypos)
-        //     .w(tile_width)
-        //     .h(tile_height)
-        //     .color(self.col);
     }
 
     pub fn set_color(&mut self, new_color: rgb::Rgb<nannou::color::encoding::Srgb, u8>) {
@@ -149,6 +143,7 @@ impl Tile {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Pattern {
     pub pattern_to_replace: Vec<rgb::Rgb<nannou::color::encoding::Srgb, u8>>,
     pub replacement_pattern: Vec<rgb::Rgb<nannou::color::encoding::Srgb, u8>>,

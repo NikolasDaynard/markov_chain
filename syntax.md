@@ -1,6 +1,7 @@
 [w 2 2] // white tile at 2,2, (starting config at top of file)
 [steps 2] // limits steps to 2, (0, 1, 2, stop), (omit to have run until no matches left)
 $CustomColor = 3 3 3 // rgb
+$CustomRule = *!w|CustomColor // rules can also be defined this way
 
 (b=w) // black is randomly white
 {b=w} // all black is white (greedy)
@@ -11,6 +12,7 @@ $CustomColor = 3 3 3 // rgb
 (b=*) // black is any tile, (wildcard)
 (b=*!w|b) // black is any tile, except white or black
 (b=$CustomColor$) // custom color
+(b=$CustomRule$) // custom rule
 
 // loop on tile sequence existing, (exampe same as {w=b})
 w{

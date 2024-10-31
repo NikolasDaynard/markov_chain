@@ -1,10 +1,12 @@
 use nannou::prelude::*;
 mod structures;
 use crate::structures::*;
+mod lexer;
+use crate::lexer::*;
 use rand::seq::SliceRandom;  // Import the random selection method
 use rand::thread_rng;
-use std::arch::x86_64::_mm_pause;
 use std::collections::HashMap;
+use std::env;
 use std::time::Instant;
 
 // inspired by markov jr
@@ -14,6 +16,7 @@ struct Model {
     iterations: i32,
     previous_window_size: (f32, f32),
     tilemap: HashMap<Color, Vec<Tile>>,
+    rewrite_rules: Vec<Pattern>,
 }
 
 fn model(app: &App) -> Model {
@@ -34,8 +37,6 @@ fn model(app: &App) -> Model {
         }
     }
     grid.set(50, 50, Tile::new(50.0, 50.0, BLACK));
-    // grid.set(51, 50, Tile::new(51.0, 50.0, BLACK));
-    // grid.set(52, 50, Tile::new(52.0, 50.0, BLACK));
 
     let mut tilemap: HashMap<Color, Vec<Tile>> = HashMap::new();
     for x in 0..grid.sx {
@@ -52,11 +53,32 @@ fn model(app: &App) -> Model {
         }
     }
 
+    let args: Vec<String> = env::args().collect();
+    let rewrite_rules = vec![
+        // Rule: Replace WHITE space surrounded by BLACKs into a BLACK (to form cave structure)
+        Pattern::new(vec![BLACK, WHITE, WHITE], vec![BLACK, GRAY, GRAY]), // random walk
+        Pattern::new(vec![GRAY, WHITE], vec![BLUE, GRAY]), // expand
+        Pattern::new(vec![GRAY], vec![BLUE]), // homogonize
+        Pattern::new(vec![BLUE, WHITE], vec![RED, BLUE]), // expand again
+
+        Pattern::new(vec![RED, WHITE], vec![BLACK, PINK]), // make more
+        Pattern::new(vec![PINK, RED], vec![BLUE, BLUE]), // Expand pink doorways
+        Pattern::new(vec![PINK, BLUE], vec![BLUE, BLUE]), // Expand pink doorways
+
+        Pattern::new(vec![BLACK], vec![BLUE]), // cleanup
+    ];
+    
+    let generated_rules = parse_file(args[1].clone());
+    for (i, rule) in rewrite_rules.iter().enumerate() {
+        assert_eq!(generated_rules[i], *rule);
+    }
+    
     Model {
         grid: grid,
         iterations: 0,
         previous_window_size: (0.0, 0.0),
         tilemap: tilemap,
+        rewrite_rules: rewrite_rules,
     }
 }
 
@@ -65,6 +87,8 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     // next thing, make map store what checks tile passes, if it is not updated and fails the check, remove it from the map
     // if you use it as starting tile, and it fails the check, add num to failing checks, if a tile near it updates reset it
     // only need to notify in straight line <- ^ V ->
+
+    // start sequence fail = dead and then needs update to relive
 
     // multithreading this is *super* possible, one per rule
     let now = Instant::now();
@@ -76,26 +100,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         model.previous_window_size = (win.w(), win.h());
         model.grid.reset_iterations();
     }
-
-    let mut all_patterns: Vec<Pattern> = vec![];
-    all_patterns.append(
-        &mut vec![
-            // Rule: Replace WHITE space surrounded by BLACKs into a BLACK (to form cave structure)
-            Pattern::new(vec![BLACK, WHITE, WHITE], vec![BLACK, GRAY, GRAY]), // random walk
-            Pattern::new(vec![GRAY, WHITE], vec![BLUE, GRAY]), // expand
-            Pattern::new(vec![GRAY], vec![BLUE]), // homogonize
-            Pattern::new(vec![BLUE, WHITE], vec![RED, BLUE]), // expand again
-
-            Pattern::new(vec![RED, WHITE], vec![BLACK, PINK]), // make more
-            Pattern::new(vec![PINK, RED], vec![BLUE, BLUE]), // Expand pink doorways
-            Pattern::new(vec![PINK, BLUE], vec![BLUE, BLUE]), // Expand pink doorways
-
-            Pattern::new(vec![BLACK], vec![BLUE]), // cleanup
-        ]
-    );
     
     // Function to recursively check for pattern match
-    fn check_pattern(grid: &Grid, x: usize, y: usize, pattern: &[rgb::Rgb<nannou::color::encoding::Srgb, u8>], mut searched_tiles: Vec<(usize, usize)>, mut direction: Option<(i32, i32)>, depth: usize) -> Option<Vec<(usize, usize)>> {
+    fn check_pattern(grid: &Grid, x: usize, y: usize, pattern: &[rgb::Rgb<nannou::color::encoding::Srgb, u8>], mut searched_tiles: Vec<(usize, usize)>, direction: Option<(i32, i32)>, depth: usize) -> Option<Vec<(usize, usize)>> {
         if depth >= pattern.len() {
             return Some(vec![]);  // Found entire pattern
         }
@@ -136,7 +143,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         None
     }
 
-    for sequence in all_patterns {
+    for sequence in model.rewrite_rules.iter() {
         let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
         // Iterate through the grid to find matching patterns
         if !model.tilemap.contains_key(&Color::new(*sequence.pattern_to_replace.first().unwrap())) {
@@ -146,6 +153,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             if let Some(matching_tiles) = check_pattern(&model.grid, tile.x as usize, tile.y as usize, &sequence.pattern_to_replace, vec![], None, 0) {
                 // println!("Pattern found starting at x: {}, y: {}", x, y);
                 all_matches.push(matching_tiles);
+                // break; // greedy take (optimal)
             }
         }
         if let Some(random_match) = all_matches.as_slice().choose(&mut thread_rng()) {
