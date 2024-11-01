@@ -1,6 +1,8 @@
 use nannou::prelude::*;
 use std::hash::{Hash, Hasher};
 
+use crate::structures;
+
 pub struct Color {
     col: rgb::Rgb<nannou::color::encoding::Srgb, u8>,
 }
@@ -81,12 +83,13 @@ pub struct Tile {
     pub y: f32,
     pub col: rgb::Rgb<nannou::color::encoding::Srgb, u8>,
     pub iterations: i32,
+    pub live_sequences: u128, // Each bit represents a boolean
     // pub notified: bool, // if tile near it has been updated
 }
 
 impl Tile {
     pub fn new(x: f32, y: f32, col: rgb::Rgb<nannou::color::encoding::Srgb, u8>) -> Self {
-        Tile { x, y, col, iterations: 0}
+        Tile { x, y, col, iterations: 0, live_sequences: u128::max_value()}
     }
 
     pub fn draw(&self, draw: &Draw, win: &Rect, grid_width: i32, grid_height: i32) {
@@ -101,7 +104,7 @@ impl Tile {
         // let mut new_color = self.col;
         // xpos = xpos * 0.9;
         // ypos = ypos * 0.9;
-        // if self.notified {
+        // if !self.(3) {
         //     // new_color = rgb::Srgb { 
         //     //     red: clamp_max(self.col.red as i32 + 100, 255) as u8, 
         //     //     green: clamp_max(self.col.green as i32 + 100, 255) as u8, 
@@ -138,8 +141,36 @@ impl Tile {
         // self.notified = false;
         self.iterations += 1;
     }
+
+    // Set the `n`-th sequence as not live (0)
+    pub fn kill(&mut self, n: usize) {
+        self.live_sequences &= !(1 << n);
+    }
+
+    pub fn set_live(&mut self) {
+        self.live_sequences = u128::max_value();
+    }
+
+    // Check if the `n`-th sequence is live
+    pub fn is_sequence_live(&self, n: usize) -> bool {
+        (self.live_sequences & (1 << n)) != 0
+    }
+    fn format_u32_as_bits(n: u128) -> String {
+        // Format as a 128-bit binary string with leading zeros
+        let binary_str = format!("{:0128b}", n);
+        
+        // Insert a space every 4 bits
+        binary_str
+            .chars()
+            .collect::<Vec<_>>()
+            .chunks(4)
+            .map(|chunk| chunk.iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
     pub fn print(&self) {
         println!("x: {}, y: {}, col, r:{} g:{} b:{}", self.x, self.y, self.col.red, self.col.green, self.col.blue);
+        println!("live at seqences: {}", structures::Tile::format_u32_as_bits(self.live_sequences));
     }
 }
 

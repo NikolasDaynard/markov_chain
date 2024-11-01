@@ -5,7 +5,7 @@ use std::fs::{self, File};
 use std::io::{self, *};
 use regex::Regex;
 
-use crate::{Color, Pattern};
+use crate::Pattern;
 
 pub fn parse_file(arg: String) -> Vec<Pattern>{
     let file =  fs::read_to_string(arg).expect("Unable to read file");

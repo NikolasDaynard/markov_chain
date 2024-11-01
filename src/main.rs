@@ -126,19 +126,36 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         None
     }
 
-    for sequence in model.rewrite_rules.iter() {
+    for (i, sequence) in model.rewrite_rules.iter().enumerate() {
         let mut all_matches: Vec<Vec<(usize, usize)>> = vec![];
         // Iterate through the grid to find matching patterns
         if !model.tilemap.contains_key(&Color::new(*sequence.pattern_to_replace.first().unwrap())) {
             continue;
         }
-        for tile in model.tilemap[&Color::new(*sequence.pattern_to_replace.first().unwrap())].iter() {
-            if let Some(matching_tiles) = check_pattern(&model.grid, tile.x as usize, tile.y as usize, &sequence.pattern_to_replace, vec![], None, 0) {
-                // println!("Pattern found starting at x: {}, y: {}", x, y);
-                all_matches.push(matching_tiles);
-                // break; // greedy take (optimal)
+        if let Some(pattern_color) = sequence.pattern_to_replace.first() {
+            if let Some(tiles) = model.tilemap.get_mut(&Color::new(*pattern_color)) {
+                for tile in tiles.iter_mut() {
+                    if !tile.is_sequence_live(i) {
+                        // tile.print();
+                        // println!("skipped");
+                        continue;
+                    }
+
+                    if let Some(matching_tiles) = check_pattern(&model.grid, tile.x as usize, tile.y as usize, &sequence.pattern_to_replace, vec![], None, 0) {
+                        all_matches.push(matching_tiles);
+                        // break; // greedy take (optimal)
+                    } else {
+                        tile.kill(i); 
+                    }
+                }
+            } else {
+                println!("Pattern color not found in tilemap.");
             }
+        } else {
+            println!("Pattern to replace is empty.");
         }
+        
+        
         if let Some(random_match) = all_matches.as_slice().choose(&mut thread_rng()) {
             let tilmapelapsed = now.elapsed();
 
@@ -173,11 +190,16 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
                 let new_tile = Tile::new(tx as f32, ty as f32, sequence.replacement_pattern[i].clone());
                 let prev_tile = model.grid.get(tx, ty).unwrap();
-                
                 replace_tile(prev_tile, new_tile);
-                
 
                 model.grid.set(tx, ty, new_tile);
+
+                // update tiles live
+                let default = Tile::new(-1.0, -1.0, BLACK); 
+                model.grid.get(tx + 1, ty).unwrap_or(default).set_live();
+                model.grid.get(ty.checked_sub(1).unwrap_or(usize::MAX), ty).unwrap_or(default).set_live();
+                model.grid.get(tx, ty + 1).unwrap_or(default).set_live();
+                model.grid.get(tx, ty.checked_sub(1).unwrap_or(usize::MAX)).unwrap_or(default).set_live();
                 // println!("set {} {} {}", tx, ty, i);
 
             }
