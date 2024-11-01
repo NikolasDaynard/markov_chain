@@ -36,7 +36,6 @@ fn model(app: &App) -> Model {
             grid.set(i as usize, j as usize, Tile::new(i as f32, j as f32, WHITE));
         }
     }
-    grid.set(50, 50, Tile::new(50.0, 50.0, BLACK));
 
     let mut tilemap: HashMap<Color, Vec<Tile>> = HashMap::new();
     for x in 0..grid.sx {
@@ -144,38 +143,39 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             let tilmapelapsed = now.elapsed();
 
             for (i, &(tx, ty)) in random_match.iter().enumerate() {
+
+                let mut replace_tile = |prev_tile: Tile, new_tile: Tile| {
+                    let mut tile_vector: Vec<Tile>;
+                    if model.tilemap.contains_key(&Color::new(new_tile.col)) {
+                        tile_vector = model.tilemap[&Color::new(new_tile.col)].clone();
+                    }else {
+                        tile_vector = vec![];
+                    }
+                    tile_vector.push(new_tile);
+                    model.tilemap.insert(Color::new(new_tile.col), tile_vector);
+
+                    // collect garbage
+                    if model.tilemap.contains_key(&Color::new(prev_tile.col)) {
+                        tile_vector = model.tilemap[&Color::new(prev_tile.col)].clone();
+                    }else {
+                        tile_vector = vec![];
+                    }
+
+                    let mut index = 0;
+                    for tile in tile_vector.iter() {
+                        if tile.x as usize == tx && tile.y as usize == ty {
+                            tile_vector.remove(index);
+                            break;
+                        }
+                        index += 1;
+                    }
+                };
+
                 let new_tile = Tile::new(tx as f32, ty as f32, sequence.replacement_pattern[i].clone());
                 let prev_tile = model.grid.get(tx, ty).unwrap();
-
-                let mut tile_vector: Vec<Tile>;
-                if model.tilemap.contains_key(&Color::new(new_tile.col)) {
-                    tile_vector = model.tilemap[&Color::new(new_tile.col)].clone();
-                }else {
-                    tile_vector = vec![];
-                }
-                tile_vector.push(new_tile);
-                model.tilemap.insert(Color::new(new_tile.col), tile_vector);
-
-                // collect garbage
-                if model.tilemap.contains_key(&Color::new(prev_tile.col)) {
-                    tile_vector = model.tilemap[&Color::new(prev_tile.col)].clone();
-                }else {
-                    tile_vector = vec![];
-                }
-
-                let mut index = 0;
-                for tile in tile_vector.iter() {
-                    if tile.x as usize == tx && tile.y as usize == ty {
-                        tile_vector.remove(index);
-                        index = 100000;
-                        break;
-                    }
-                    index += 1;
-                }
-                if index != 100000 {
-                    println!("ERROR. NOT FOUND TILE")
-                }
-                assert_eq!(index, 100000);
+                
+                replace_tile(prev_tile, new_tile);
+                
 
                 model.grid.set(tx, ty, new_tile);
                 // println!("set {} {} {}", tx, ty, i);

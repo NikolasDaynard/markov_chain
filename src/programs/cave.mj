@@ -11,6 +11,7 @@
 // Pattern::new(vec![BLACK], vec![BLUE]), // cleanup
 
 // k is black
+
 (kww=ggk)
 (gw=gb)
 (g=b)
@@ -20,3 +21,4 @@
 (pr=bb)
 (pb=bb)
 (k=b)
+(w=k)
