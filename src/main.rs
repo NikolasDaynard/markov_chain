@@ -12,9 +12,10 @@ use std::time::Instant;
 // inspired by markov jr
 // pick *tile* randomly rather than assemble all possible tiles and select
 struct Model {
+    prev_mouse: (f32, f32),
     grid: Grid,
     iterations: i32,
-    previous_window_size: (f32, f32),
+    prev_window_size: (f32, f32),
     tilemap: HashMap<Color, Vec<Tile>>,
     rewrite_rules: Vec<Pattern>,
 }
@@ -57,9 +58,10 @@ fn model(app: &App) -> Model {
     let generated_rules = parse_file(args[1].clone());
 
     Model {
+        prev_mouse: (0.0, 0.0),
         grid: grid,
         iterations: 0,
-        previous_window_size: (0.0, 0.0),
+        prev_window_size: (0.0, 0.0),
         tilemap: tilemap,
         rewrite_rules: generated_rules,
     }
@@ -74,13 +76,25 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     // start sequence fail = dead and then needs update to relive
 
     // multithreading this is *super* possible, one per rule
+    // tile update fails | - +
     let now = Instant::now();
+    if app.mouse.x != model.prev_mouse.0 || app.mouse.y != model.prev_mouse.1 {
+        if model.prev_mouse.0 == -1.0 {
+            model.grid.reset_iterations(); // redraw all
+            model.prev_mouse.0 = app.mouse.x;
+            model.prev_mouse.1 = app.mouse.y;
+        }else {
+            model.prev_mouse.0 = -1.0;
+            model.prev_mouse.1 = -1.0;
+        }
+    }
+
     model.iterations += 1;
     model.grid.iterate();
 
     let win = app.window_rect();
-    if model.previous_window_size != (win.w(), win.h()) {
-        model.previous_window_size = (win.w(), win.h());
+    if model.prev_window_size != (win.w(), win.h()) {
+        model.prev_window_size = (win.w(), win.h());
         model.grid.reset_iterations();
     }
     
@@ -137,7 +151,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 for tile in tiles.iter_mut() {
                     if !tile.is_sequence_live(i) {
                         // tile.print();
-                        // println!("skipped");
                         continue;
                     }
 
@@ -145,7 +158,13 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                         all_matches.push(matching_tiles);
                         // break; // greedy take (optimal)
                     } else {
-                        tile.kill(i); 
+                        // TODO: this stupid check is needed, 
+                        // only tiles directly next to the new tiles are updates, 
+                        // if one of the tiles in a really long sequence is flipped, 
+                        // it has no idea this is potentially still open, so limit to just one tile away
+                        if !check_pattern(&model.grid, tile.x as usize, tile.y as usize, &[*sequence.pattern_to_replace.first().unwrap()], vec![], None, 0).is_some() {
+                            tile.kill(i); 
+                        }
                     }
                 }
             } else {
@@ -223,12 +242,66 @@ fn main() {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
+    // let now = Instant::now();
+    // TODO: debug window showing live of hovered tile
     let win = app.window_rect();
 
     let draw = app.draw();
 
     model.grid.draw(&draw, &win);
+    draw_debug(&win, &draw, model,
+    model.grid.get_tile_at_x_y(&win, app.mouse.x, app.mouse.y));
 
     // Write the result of our drawing to the window's frame.
     draw.to_frame(app, &frame).unwrap();
+
+    // println!("Rendering: {:.2?}", now.elapsed());
 }
+
+fn draw_debug(win: &Rect, draw: &Draw, model: &Model, tile: Option<Tile>) {
+    if tile.is_none() { return; }
+    let tile = tile.unwrap();
+
+    // Get the center position of the tile
+    let (tile_x, tile_y) = tile.get_position(win, model.grid.sx, model.grid.sy);
+
+    // Set the width and height of the rectangle
+    let rect_width = 100.0;
+    let rect_height = 50.0;
+
+    // Adjust the position so (x, y) refers to the bottom-left corner of the rectangle
+    let adjusted_x = tile_x + rect_width / 2.0;
+    let adjusted_y = tile_y + rect_height / 2.0;
+
+    draw.rect()
+        .x(adjusted_x)
+        .y(adjusted_y)
+        .w(rect_width)
+        .h(rect_height)
+        .color(BLACK);
+
+        // x y
+    draw.text((tile.x.to_string() + ", " + &tile.y.to_string()).as_str())
+        .x(adjusted_x - rect_height / 2.2)
+        .y(adjusted_y + rect_height / 2.2)
+        .w(rect_width)
+        .h(rect_height)
+        .color(PINK);
+
+    // color
+    draw.text((tile.col.red.to_string() + ", " + &tile.col.green.to_string() + ", " + &tile.col.blue.to_string()).as_str())
+        .x(adjusted_x - rect_height / 2.2)
+        .y(adjusted_y + rect_height / 3.8)
+        .w(rect_width)
+        .h(rect_height)
+        .color(PINK);
+
+    // live sequences
+    draw.text(structures::Tile::format_u32_as_bits(tile.live_sequences).as_str())
+        .x(adjusted_x)
+        .y(adjusted_y)
+        .w(rect_width)
+        .h(rect_height)
+        .color(PINK).font_size(7);
+}
+

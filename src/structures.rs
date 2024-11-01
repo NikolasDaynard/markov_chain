@@ -54,8 +54,8 @@ impl Grid {
         Some(())
     }
     pub fn draw(&self, draw: &Draw, win: &Rect) {
-        for row in self.rows.clone() {
-            for mut tile in row {
+        for row in &self.rows {
+            for tile in row {
                 tile.draw(draw, win, self.sx, self.sy);
             }  
         }
@@ -73,7 +73,18 @@ impl Grid {
                 tile.iterations = 0;
             }
         }
-    }    
+    }   
+    /** Returns the tile at the <b>WORLD</b> position */ 
+    pub fn get_tile_at_x_y(&self, win: &Rect, x: f32, y: f32) -> Option<Tile> {
+        for row in &self.rows {
+            for tile in row {
+                if tile.point_intersection(x, y, win, self.sx, self.sy) {
+                    return self.get(tile.x as usize, tile.y as usize);
+                }
+            }
+        }
+        None
+    }
 }
 
 // Define a Tile struct with position and size
@@ -101,28 +112,6 @@ impl Tile {
         let tile_height = (win.h() / grid_height as f32) * 0.9;
         let xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
         let ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
-        // let mut new_color = self.col;
-        // xpos = xpos * 0.9;
-        // ypos = ypos * 0.9;
-        // if !self.(3) {
-        //     // new_color = rgb::Srgb { 
-        //     //     red: clamp_max(self.col.red as i32 + 100, 255) as u8, 
-        //     //     green: clamp_max(self.col.green as i32 + 100, 255) as u8, 
-        //     //     blue: self.col.blue, standard: ::core::marker::PhantomData };
-        //     draw.quad()
-        //         .x(xpos)
-        //         .y(ypos)
-        //         .w(tile_width * 1.1)
-        //         .h(tile_height * 1.1)
-        //         .color(AQUA);
-        // }else{
-        //     draw.quad()
-        //         .x(xpos)
-        //         .y(ypos)
-        //         .w(tile_width * 1.1)
-        //         .h(tile_height * 1.1)
-        //         .color(BLACK); 
-        // }
 
         draw.rect()
             .x(xpos)
@@ -131,7 +120,23 @@ impl Tile {
             .h(tile_height)
             .color(self.col);
     }
-
+    pub fn get_position(&self, win: &Rect, grid_width: i32, grid_height: i32) -> (f32, f32) {
+        let xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
+        let ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
+        (xpos, ypos)
+    }
+    pub fn point_intersection(&self, x: f32, y: f32, win: &Rect, grid_width: i32, grid_height: i32) -> bool {
+        let tile_width = (win.w() / grid_width as f32) * 0.9;
+        let tile_height = (win.h() / grid_height as f32) * 0.9;
+        let xpos = (((self.x + 0.5) - (grid_width as f32 / 2.0)) / grid_width as f32) * win.w();
+        let ypos = (((self.y + 0.5) - (grid_height as f32 / 2.0)) / grid_height as f32) * win.h();
+    
+        x > xpos - tile_width / 2.0
+            && x < xpos + tile_width / 2.0
+            && y > ypos - tile_height / 2.0
+            && y < ypos + tile_height / 2.0
+    }
+    
     pub fn set_color(&mut self, new_color: rgb::Rgb<nannou::color::encoding::Srgb, u8>) {
         self.col = new_color;
         self.iterations = 0;
@@ -149,13 +154,14 @@ impl Tile {
 
     pub fn set_live(&mut self) {
         self.live_sequences = u128::max_value();
+        self.iterations = 0;
     }
 
     // Check if the `n`-th sequence is live
     pub fn is_sequence_live(&self, n: usize) -> bool {
         (self.live_sequences & (1 << n)) != 0
     }
-    fn format_u32_as_bits(n: u128) -> String {
+    pub fn format_u32_as_bits(n: u128) -> String {
         // Format as a 128-bit binary string with leading zeros
         let binary_str = format!("{:0128b}", n);
         
