@@ -12,7 +12,6 @@ use std::time::Instant;
 // inspired by markov jr
 // pick *tile* randomly rather than assemble all possible tiles and select
 struct Model {
-    prev_mouse: (f32, f32),
     grid: Grid,
     iterations: i32,
     prev_window_size: (f32, f32),
@@ -58,7 +57,6 @@ fn model(app: &App) -> Model {
     let generated_rules = parse_file(args[1].clone());
 
     Model {
-        prev_mouse: (0.0, 0.0),
         grid: grid,
         iterations: 0,
         prev_window_size: (0.0, 0.0),

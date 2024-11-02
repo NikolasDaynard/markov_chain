@@ -35,6 +35,7 @@ pub struct Grid {
     pub rows: Vec<Vec<Tile>>,
 }
 
+#[allow(dead_code)]
 impl Grid {
     pub fn new(sx: usize, sy: usize) -> Self {
         Grid {
@@ -98,6 +99,7 @@ pub struct Tile {
     // pub notified: bool, // if tile near it has been updated
 }
 
+#[allow(dead_code)]
 impl Tile {
     pub fn new(x: f32, y: f32, col: rgb::Rgb<nannou::color::encoding::Srgb, u8>) -> Self {
         Tile { x, y, col, iterations: 0, live_sequences: u128::max_value()}
