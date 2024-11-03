@@ -164,8 +164,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         
         
         if let Some(random_match) = all_matches.as_slice().choose(&mut thread_rng()) {
-            let tilmapelapsed = now.elapsed();
-
             for (i, &(tx, ty)) in random_match.iter().enumerate() {
 
                 let mut replace_tile = |prev_tile: Tile, new_tile: Tile| {
@@ -213,7 +211,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
             let elapsed = now.elapsed();
             println!("Elapsed: {:.2?}", elapsed);
-            println!("Tile Elapsed: {:.2?}", tilmapelapsed);
             return;
         }
     }
